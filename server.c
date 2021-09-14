@@ -7,12 +7,14 @@
 #include <sys/fcntl.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 
 
 #define PORT 8080
 #define BUF_SIZE 1024 // block transfer size
-#define QUEUE_SIZE 10
+#define QUEUE_SIZE 100
+#define LISTENER_THREAD_NUM = 100 // maximum number of threads that can be created for listening
 
 int fatal(char *string);
 
@@ -34,11 +36,11 @@ int numThreads = 10;
 pthread_mutex_t mutexQueue;
 pthread_cond_t condQueue;
 
+sem_t listenerSemahphore;
 
 void executeJob(struct Job job){
     
     char buffer[BUF_SIZE] = {0};  // buffer for outgoing file
-    sleep(2);
     read(job.socket_fd, buffer, BUF_SIZE);
 
     int fd = open(buffer, O_RDONLY);
@@ -53,7 +55,9 @@ void executeJob(struct Job job){
     printf("Job %d done\n", job.arg);
 }
 
-void pushJob(struct Job job){
+void pushJob(void* arg){
+    struct Job job = *(struct Job*)arg;
+    free(arg);
     pthread_mutex_lock(&mutexQueue);
     if(countQueue == 100){
         printf("Internal Server Error\n");
@@ -67,10 +71,9 @@ void pushJob(struct Job job){
     pthread_cond_signal(&condQueue);
 }
 
-void* runThread(void* args){
+void* createDispatcherThread(void* args){
     while(1){
         pthread_mutex_lock(&mutexQueue);
-        int flag = 0;
         struct Job job;
         while(countQueue == 0){
             pthread_cond_wait(&condQueue, &mutexQueue);
@@ -78,23 +81,29 @@ void* runThread(void* args){
         countQueue--;
         job = jobQueue[startQueue];
         startQueue = (startQueue + 1)%queueSize;
-        flag = 1;
         pthread_mutex_unlock(&mutexQueue);
-        if(flag == 1){
-            executeJob(job);
-        }
+        executeJob(job);
     }
+}
+
+void* createListenerThread(struct Job job){
+    char messg[] = "Waiting for the connection...";
+    write(job.socket_fd, messg, sizeof(messg)/sizeof(messg[0]));
+    pthread_t thread;
+    struct Job* a = (struct Job*) malloc(sizeof(struct Job));
+    *a = job;
+    if(pthread_create(&thread, NULL, &pushJob, a));
 }
 
 
 int main(int argc, char* argv[]){
-    pthread_t threads[numThreads];
+    pthread_t dispatcherThreads[numThreads];
     pthread_mutex_init(&mutexQueue, NULL);
     pthread_cond_init(&condQueue, NULL);
     
     for(int i = 0;i<numThreads;i++){
-        if( pthread_create(&threads[i], NULL, &runThread, NULL) != 0){
-            printf("Can't create more than %d thread(s) \n", i);
+        if( pthread_create(&dispatcherThreads[i], NULL, &createDispatcherThread, NULL) != 0){
+            printf("Unable to create a Dispatcher Thread \n", i);
         }   
     }
 
@@ -128,8 +137,7 @@ int main(int argc, char* argv[]){
             .arg = new_socket,
             .socket_fd = new_socket
         };
-        printf("HIII");
-        pushJob(job);
+        
     }
 
 }
