@@ -37,7 +37,6 @@ pthread_cond_t condQueue;
 sem_t listenerThreadSemaphore;
 
 void executeJob(struct Job job){
-    
     char buffer[BUF_SIZE] = {0};  // buffer for outgoing file
     read(job.socket_fd, buffer, BUF_SIZE);
     int fd = open(buffer, O_RDONLY);
@@ -93,7 +92,7 @@ void* createDispatcherThread(void* args){
 void* createListenerThread(struct Job job){
     char messg[] = "Waiting for the connection...";
     write(job.socket_fd, messg, sizeof(messg)/sizeof(messg[0]));
-    pthread_t thread;
+    pthread_t thread; 
     struct Job* a = (struct Job*) malloc(sizeof(struct Job));
     *a = job;
     if(pthread_create(&thread, NULL, &pushJob, (void *) a) != 0){
