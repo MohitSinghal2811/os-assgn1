@@ -11,4 +11,4 @@
 
 3) [Thread Attributes](https://users.cs.cf.ac.uk/Dave.Marshall/C/node30.html)
 
-4) [Usage of rlimit](https://www.geeksforgeeks.org/get-set-process-resource-limits-in-c/#:~:text=int%20setrlimit(%20int%20resource%2C%20const,pass%20the%20address%20of%20rlim.)
+4) [Usage of rlimit](https://www.geeksforgeeks.org/get-set-process-resource-limits-in-c/)
