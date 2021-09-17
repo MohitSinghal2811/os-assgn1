@@ -9,14 +9,28 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/resource.h>
+#include <semaphore.h>
+
 
 
 
 #define PORT 8080
 #define BUF_SIZE 1024 // block transfer size
 #define QUEUE_SIZE 10
+#define LISTENER_THREAD_NUM 100 // maximum number of threads that can be created for listening
+
 
 int fatal(char *string);
+
+int printfunction(char *string){
+    printf("%s\n", string);
+    exit(1);
+} 
+
+int fatal(char *string){
+    printf("%s\n", string);
+    exit(1);
+} 
 
 struct Job{
     char* dll_name;
@@ -30,11 +44,11 @@ struct Job jobQueue[100];
 int countQueue = 0;
 int startQueue = 0;
 int endQueue = 0;
-int numThreads = 10;
 
 
 pthread_mutex_t mutexQueue;
 pthread_cond_t condQueue;
+sem_t listenerThreadSemaphore;
 
 
 void executeJob(struct Job job){
@@ -54,9 +68,9 @@ void executeJob(struct Job job){
     printf("Job %d done\n", job.arg);
 }
 
-void*  pushJob(void *arg){
-    pthread_mutex_lock(&mutexQueue);
-    struct Job job = *(struct Job*)arg;
+void pushJob(struct Job job){
+    // pthread_mutex_lock(&mutexQueue);
+    // struct Job job = *(struct Job*)arg;
     if(countQueue == 100){
         printf("Internal Server Error\n");
     }
@@ -65,7 +79,7 @@ void*  pushJob(void *arg){
         jobQueue[endQueue] = job;
         endQueue = (endQueue + 1)%queueSize;
     }
-    free(arg);
+    // free(arg);
     pthread_mutex_unlock(&mutexQueue);
     pthread_cond_signal(&condQueue);
 }
@@ -90,40 +104,27 @@ void* runThread(void* args){
 }
 
 
-void* createListenerThread(struct Job job){
-    pthread_t thread; 
-    struct Job* a = (struct Job*) malloc(sizeof(struct Job));
-    *a = job;
-    if(pthread_create(&thread, NULL, &pushJob, (void *) a) != 0){
-        printf("IIIIIII\n");
-    }
-}
-
 
 int main(int argc, char* argv[]){
     struct rlimit limit;
     struct rusage usage;
-    getrusage(RUSAGE_SELF, &usage);
-    printf("%ld \n", usage.ru_maxrss);
 
+    if(argc != 4){
+        printfunction("Usage: ./server [Thread Limit] [Memory Limit (in MB)] [File Limit] ");
+    }
 
-    if(getrlimit(RLIMIT_AS, &limit) == 0)
-        printf("%ld %ld \n", limit.rlim_cur, limit.rlim_max);
-    else
-        fprintf(stderr, "%s\n", hstrerror(errno));
-
-
-    limit.rlim_cur = 1000000000;
-    limit.rlim_max = 1000000000;
+    limit.rlim_cur = 1024 * 1024 * atoi(argv[2]);
+    limit.rlim_max = 1024 * 1024 * atoi(argv[2]);
 
     if(setrlimit(RLIMIT_AS, &limit) == -1)
         fprintf(stderr, "%s\n", hstrerror(errno));
 
+    int numThreads = atoi(argv[1]);
 
-    if(getrlimit(RLIMIT_AS, &limit) == 0)
-        printf("%ld %ld \n", limit.rlim_cur, limit.rlim_max);
-    else
-        fprintf(stderr, "%s\n", hstrerror(errno));
+    // if(getrlimit(RLIMIT_AS, &limit) == 0)
+    //     printf("%ld %ld \n", limit.rlim_cur, limit.rlim_max);
+    // else
+    //     fprintf(stderr, "%s\n", hstrerror(errno));
 
 
     pthread_t threads[numThreads];
@@ -135,6 +136,8 @@ int main(int argc, char* argv[]){
             printf("Can't create more than %d thread(s) \n", i);
         }   
     }
+
+    sem_init(&listenerThreadSemaphore, 0, LISTENER_THREAD_NUM);
 
     int server_fd, new_socket;
     struct sockaddr_in channel; // holds IP address
@@ -166,17 +169,9 @@ int main(int argc, char* argv[]){
             .arg = new_socket,
             .socket_fd = new_socket
         };
-        createListenerThread(job);
-        // pushJob(job);
-        getrusage(RUSAGE_SELF, &usage);
-        printf("%ld \n", usage.ru_isrss);
+        pushJob(job);
+
     }
 
 }
 
-
-
-int fatal(char *string){
-    printf("%s\n", string);
-    exit(1);
-} 

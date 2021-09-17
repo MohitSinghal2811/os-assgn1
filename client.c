@@ -18,7 +18,7 @@
 
 int fatal(char *string);
 
-int numThreads = 10;
+int numThreads = 10000;
 
 char *file_name;
 
