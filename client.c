@@ -20,9 +20,6 @@ int fatal(char *string);
 
 int numThreads = 10000;
 
-char *file_name;
-
-
 void* runThread(void* args ){
     
     int server_fd;
@@ -42,23 +39,31 @@ void* runThread(void* args ){
     }
     int c = connect(server_fd, (struct sockaddr *) &channel, sizeof(channel));
     if(c < 0) fatal("connection failed");
+    
+    char* input = "/lib/x86_64-linux-gnu/libm.so.6 exp 1";
+    // char* function_name = "exp\0";
+    // char* arg = "1\0";
 
-    write(server_fd, file_name, strlen(file_name) + 1);
+    write(server_fd, input, strlen(input) + 1);
+    // write(server_fd, function_name, strlen(function_name) + 1);
+    // write(server_fd, arg, strlen(arg) + 1);
 
-    while(1){
-        printf("MOHIIIT\n");
-        int bytes = read(server_fd, buffer, BUF_SIZE);
-        if(bytes<=0) break;
-        write(1, buffer, bytes);
-    }
+    // printf("%s %s %s\n", function_name, file_name, arg);
+    fflush(stdout);
+
+
+    // while(1){
+    //     int bytes = read(server_fd, buffer, BUF_SIZE);
+    //     if(bytes<=0) break;
+    //     write(1, buffer, bytes);
+    // }
     
 }
 
 
 int main(int argc, char **argv){
-    if(argc != 2) fatal("Usage: client file-name");
+    if(argc != 1) fatal("Usage: client \n");
 
-    file_name = argv[1];
     pthread_t threads[numThreads];
 
     for(int i = 0;i<numThreads;i++){

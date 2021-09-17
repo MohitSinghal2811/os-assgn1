@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <sys/resource.h>
 #include <semaphore.h>
+#include <string.h>
+#include "DLL_invoker.c"
 
 
 
@@ -17,10 +19,7 @@
 #define PORT 8080
 #define BUF_SIZE 1024 // block transfer size
 #define QUEUE_SIZE 10
-#define LISTENER_THREAD_NUM 100 // maximum number of threads that can be created for listening
 
-
-int fatal(char *string);
 
 int printfunction(char *string){
     printf("%s\n", string);
@@ -35,7 +34,7 @@ int fatal(char *string){
 struct Job{
     char* dll_name;
     char* fun_name;
-    int arg;
+    char* arg;
     int socket_fd;
 };
 
@@ -55,9 +54,7 @@ void executeJob(struct Job job){
 
     char buffer[BUF_SIZE] = {0};  // buffer for outgoing file
     read(job.socket_fd, buffer, BUF_SIZE);
-
     int fd = open(buffer, O_RDONLY);
-    printf("executing job %d \n", job.arg);
     while(1){
         int bytes = read(fd, buffer, BUF_SIZE);
         if(bytes <= 0) break;
@@ -65,7 +62,7 @@ void executeJob(struct Job job){
     }
     close(fd);
     close(job.socket_fd);
-    printf("Job %d done\n", job.arg);
+    printf("Job %ld done\n", job.socket_fd);
 }
 
 void pushJob(struct Job job){
@@ -121,12 +118,6 @@ int main(int argc, char* argv[]){
 
     int numThreads = atoi(argv[1]);
 
-    // if(getrlimit(RLIMIT_AS, &limit) == 0)
-    //     printf("%ld %ld \n", limit.rlim_cur, limit.rlim_max);
-    // else
-    //     fprintf(stderr, "%s\n", hstrerror(errno));
-
-
     pthread_t threads[numThreads];
     pthread_mutex_init(&mutexQueue, NULL);
     pthread_cond_init(&condQueue, NULL);
@@ -137,7 +128,7 @@ int main(int argc, char* argv[]){
         }   
     }
 
-    sem_init(&listenerThreadSemaphore, 0, LISTENER_THREAD_NUM);
+    // sem_init(&listenerThreadSemaphore, 0, LISTENER_THREAD_NUM);
 
     int server_fd, new_socket;
     struct sockaddr_in channel; // holds IP address
@@ -158,19 +149,39 @@ int main(int argc, char* argv[]){
 
     int l = listen(server_fd, QUEUE_SIZE); // specify queue size
     if(l < 0) fatal("listen failed");
-    printf("Waiting...");
 
     while(1){
+        
         new_socket = accept(server_fd, 0, 0);
         if(new_socket < 0) fatal("accept failed");
+
+        char input[BUF_SIZE];
+    
+        int bytes;
+        bytes = read(new_socket, input, BUF_SIZE);
+
+        char delim[] = " ";
+	    char *ptr = strtok(input, delim);
+        // printf("%s\n", ptr);
+        // printf("%s\n", strtok(NULL, delim));
+        // printf("%s\n", strtok(NULL, delim));
+        char* dll_name = ptr;
+        char* fun_name = strtok(NULL, delim);
+        char* arg = strtok(NULL, delim);
+
         struct Job job = {
-            .dll_name = "DLL_name", 
-            .fun_name = "fun_name", 
-            .arg = new_socket,
+            .dll_name = dll_name, 
+            .fun_name = fun_name, 
+            .arg = arg,
             .socket_fd = new_socket
         };
-        pushJob(job);
 
+        printf("%s %s %s\n", job.dll_name, job.fun_name, job.arg);
+        fflush(stdout);
+
+        // close(new_socket);
+
+        pushJob(job);
     }
 
 }
