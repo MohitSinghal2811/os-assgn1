@@ -14,12 +14,11 @@
 #include "DLL_invoker.c"
 
 
-
-
 #define PORT 8080
 #define BUF_SIZE 1024 // block transfer size
-#define QUEUE_SIZE 10
+#define QUEUE_SIZE 100 // This queue size is for socket listener
 
+sem_t file_semaphore;
 
 int printfunction(char *string){
     printf("%s\n", string);
@@ -47,35 +46,25 @@ int endQueue = 0;
 
 pthread_mutex_t mutexQueue;
 pthread_cond_t condQueue;
-sem_t listenerThreadSemaphore;
 
 
 void executeJob(struct Job job){
 
-    // char buffer[BUF_SIZE] = {0};  // buffer for outgoing file
-    // read(job.socket_fd, buffer, BUF_SIZE);
-    // int fd = open(buffer, O_RDONLY);
-    // while(1){
-    //     int bytes = read(fd, buffer, BUF_SIZE);
-    //     if(bytes <= 0) break;
-    //     write(job.socket_fd, buffer, bytes);
-    // }
     struct request req = {
         .args = job.arg,
         .file_name = job.dll_name,
         .function_name = job.fun_name
     };
-
+    sem_wait(&file_semaphore);
     char * ans = dll_function(req);
+    sem_post(&file_semaphore);
     write(job.socket_fd, ans, strlen(ans) + 1);
-
     close(job.socket_fd);
     printf("Job %ld done\n", job.socket_fd);
 }
 
 void pushJob(struct Job job){
-    // pthread_mutex_lock(&mutexQueue);
-    // struct Job job = *(struct Job*)arg;
+    
     if(countQueue == 100){
         printf("Internal Server Error\n");
     }
@@ -84,7 +73,7 @@ void pushJob(struct Job job){
         jobQueue[endQueue] = job;
         endQueue = (endQueue + 1)%queueSize;
     }
-    // free(arg);
+
     pthread_mutex_unlock(&mutexQueue);
     pthread_cond_signal(&condQueue);
 }
@@ -112,7 +101,6 @@ void* runThread(void* args){
 
 int main(int argc, char* argv[]){
     struct rlimit limit;
-    struct rusage usage;
 
     if(argc != 4){
         printfunction("Usage: ./server [Thread Limit] [Memory Limit (in MB)] [File Limit] ");
@@ -130,13 +118,13 @@ int main(int argc, char* argv[]){
     pthread_mutex_init(&mutexQueue, NULL);
     pthread_cond_init(&condQueue, NULL);
 
+    sem_init(&file_semaphore, 0, atoi(argv[3]));
+
     for(int i = 0;i<numThreads;i++){
         if( pthread_create(&threads[i], NULL, &runThread, NULL) != 0){
             printf("Can't create more than %d thread(s) \n", i);
         }   
     }
-
-    // sem_init(&listenerThreadSemaphore, 0, LISTENER_THREAD_NUM);
 
     int server_fd, new_socket;
     struct sockaddr_in channel; // holds IP address
@@ -170,9 +158,6 @@ int main(int argc, char* argv[]){
 
         char delim[] = " ";
 	    char *ptr = strtok(input, delim);
-        // printf("%s\n", ptr);
-        // printf("%s\n", strtok(NULL, delim));
-        // printf("%s\n", strtok(NULL, delim));
         char* dll_name = ptr;
         char* fun_name = strtok(NULL, delim);
         char* arg = strtok(NULL, delim);
@@ -186,9 +171,7 @@ int main(int argc, char* argv[]){
 
         printf("%s %s %s\n", job.dll_name, job.fun_name, job.arg);
         fflush(stdout);
-
-        // close(new_socket);
-
+ 
         pushJob(job);
     }
 

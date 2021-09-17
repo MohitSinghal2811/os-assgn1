@@ -18,7 +18,7 @@
 
 int fatal(char *string);
 
-int numThreads = 1000;
+int numThreads = 10;
 
 void* runThread(void* args ){
     
@@ -41,24 +41,12 @@ void* runThread(void* args ){
     if(c < 0) fatal("connection failed");
     
     char* input = "/lib/x86_64-linux-gnu/libm.so.6 exp 1";
-    // char* function_name = "exp\0";
-    // char* arg = "1\0";
 
     write(server_fd, input, strlen(input) + 1);
-    // write(server_fd, function_name, strlen(function_name) + 1);
-    // write(server_fd, arg, strlen(arg) + 1);
-
-    // printf("%s %s %s\n", function_name, file_name, arg);
     fflush(stdout);
     int bytes = read(server_fd, buffer, BUF_SIZE);
     write(1, buffer, bytes);
 
-    // while(1){
-    //     int bytes = read(server_fd, buffer, BUF_SIZE);
-    //     if(bytes<=0) break;
-    //     write(1, buffer, bytes);
-    // }
-    
 }
 
 
@@ -80,7 +68,6 @@ int main(int argc, char **argv){
     }
 
 }
-
 
 int fatal(char *string){
     printf("%s\n", string);
