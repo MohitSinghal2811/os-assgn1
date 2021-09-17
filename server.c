@@ -52,15 +52,23 @@ sem_t listenerThreadSemaphore;
 
 void executeJob(struct Job job){
 
-    char buffer[BUF_SIZE] = {0};  // buffer for outgoing file
-    read(job.socket_fd, buffer, BUF_SIZE);
-    int fd = open(buffer, O_RDONLY);
-    while(1){
-        int bytes = read(fd, buffer, BUF_SIZE);
-        if(bytes <= 0) break;
-        write(job.socket_fd, buffer, bytes);
-    }
-    close(fd);
+    // char buffer[BUF_SIZE] = {0};  // buffer for outgoing file
+    // read(job.socket_fd, buffer, BUF_SIZE);
+    // int fd = open(buffer, O_RDONLY);
+    // while(1){
+    //     int bytes = read(fd, buffer, BUF_SIZE);
+    //     if(bytes <= 0) break;
+    //     write(job.socket_fd, buffer, bytes);
+    // }
+    struct request req = {
+        .args = job.arg,
+        .file_name = job.dll_name,
+        .function_name = job.fun_name
+    };
+
+    char * ans = dll_function(req);
+    write(job.socket_fd, ans, strlen(ans) + 1);
+
     close(job.socket_fd);
     printf("Job %ld done\n", job.socket_fd);
 }

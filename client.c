@@ -18,7 +18,7 @@
 
 int fatal(char *string);
 
-int numThreads = 10000;
+int numThreads = 1000;
 
 void* runThread(void* args ){
     
@@ -50,7 +50,8 @@ void* runThread(void* args ){
 
     // printf("%s %s %s\n", function_name, file_name, arg);
     fflush(stdout);
-
+    int bytes = read(server_fd, buffer, BUF_SIZE);
+    write(1, buffer, bytes);
 
     // while(1){
     //     int bytes = read(server_fd, buffer, BUF_SIZE);
