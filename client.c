@@ -46,6 +46,7 @@ void* runThread(void* args ){
     write(server_fd, file_name, strlen(file_name) + 1);
 
     while(1){
+        printf("MOHIIIT\n");
         int bytes = read(server_fd, buffer, BUF_SIZE);
         if(bytes<=0) break;
         write(1, buffer, bytes);
