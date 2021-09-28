@@ -13,12 +13,12 @@
 #include <string.h>
 #include <pthread.h>
 
-#define PORT 8080
+// #define PORT 8080
 #define BUF_SIZE 1024
+int port;
 
 int fatal(char *string);
 
-int numThreads = 10;
 
 void* runThread(void* args ){
     
@@ -31,7 +31,7 @@ void* runThread(void* args ){
     if(server_fd < 0) fatal("socket");
 
     channel.sin_family = AF_INET;
-    channel.sin_port = htons(PORT);
+    channel.sin_port = htons(port);
 
     int i = inet_pton(AF_INET, "127.0.0.1", &channel.sin_addr);
     if(i <= 0){
@@ -45,14 +45,18 @@ void* runThread(void* args ){
     write(server_fd, input, strlen(input) + 1);
     fflush(stdout);
     int bytes = read(server_fd, buffer, BUF_SIZE);
+    char messg[] = "\nThe result obtained from server is:- ";
+    write(1, messg, strlen(messg) + 1);
     write(1, buffer, bytes);
 
 }
 
 
 int main(int argc, char **argv){
-    if(argc != 1) fatal("Usage: client \n");
-
+    if(argc != 3) fatal("Usage: client [port number] [number of clients to execute] \n");
+    int numThreads;
+    port = atoi(argv[2]);
+    numThreads = atoi(argv[1]);
     pthread_t threads[numThreads];
 
     for(int i = 0;i<numThreads;i++){

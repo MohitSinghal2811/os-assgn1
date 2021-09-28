@@ -14,7 +14,7 @@
 #include "DLL_invoker.c"
 
 
-#define PORT 8080
+// #define PORT 8080
 #define BUF_SIZE 1024 // block transfer size
 #define QUEUE_SIZE 100 // This queue size is for socket listener
 
@@ -56,15 +56,16 @@ void executeJob(struct Job job){
         .function_name = job.fun_name
     };
     sem_wait(&file_semaphore);
+    sleep(5);
     char * ans = dll_function(req);
     sem_post(&file_semaphore);
     write(job.socket_fd, ans, strlen(ans) + 1);
     close(job.socket_fd);
-    printf("Job %ld done\n", job.socket_fd);
+    printf("Job of client %ld done\n", job.socket_fd);
 }
 
 void pushJob(struct Job job){
-    pthread_mutex_lock(&mutexQueue);
+    
     if(countQueue == 100){
         printf("Internal Server Error\n");
     }
@@ -102,8 +103,8 @@ void* runThread(void* args){
 int main(int argc, char* argv[]){
     struct rlimit limit;
 
-    if(argc != 4){
-        printfunction("Usage: ./server [Thread Limit] [Memory Limit (in MB)] [File Limit] ");
+    if(argc != 5){
+        printfunction("Usage: ./server [Thread Limit] [Memory Limit (in MB)] [File Limit] [Port number] ");
     }
 
     limit.rlim_cur = 1024 * 1024 * atoi(argv[2]);
@@ -131,9 +132,11 @@ int main(int argc, char* argv[]){
     int opt = 1;
     int addrlen = sizeof(channel);
 
+    int port = atoi(argv[4]);
+
     channel.sin_family = AF_INET;
     channel.sin_addr.s_addr = htonl(INADDR_ANY);
-    channel.sin_port = htons( PORT );
+    channel.sin_port = htons( port );
 
     server_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); // create socket file descriptor
     if(server_fd < 0) fatal("socket failed");
@@ -169,7 +172,6 @@ int main(int argc, char* argv[]){
             .socket_fd = new_socket
         };
 
-        printf("%s %s %s\n", job.dll_name, job.fun_name, job.arg);
         fflush(stdout);
  
         pushJob(job);
