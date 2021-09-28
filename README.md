@@ -29,16 +29,3 @@ Now run the following in the shell to run the server and the provide the necessa
 ```
 **Note:-** Memory Limit argument here is the total limit of the virtual memory that the process and its child process can use. The limit should be atleast 70-80 MB otherwise the process may fail to create all the threads required for thread pool. 
 
-## Sample Run
-
-#
-
-## References
-
-1) [RLIMIT documentation](https://man7.org/linux/man-pages/man2/getrlimit.2.html)
-
-2) [Ulimit](https://www.geeksforgeeks.org/ulimit-soft-limits-and-hard-limits-in-linux/)
-
-3) [Thread Attributes](https://users.cs.cf.ac.uk/Dave.Marshall/C/node30.html)
-
-4) [Usage of rlimit](https://www.geeksforgeeks.org/get-set-process-resource-limits-in-c/)
