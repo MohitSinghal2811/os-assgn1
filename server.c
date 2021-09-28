@@ -65,6 +65,7 @@ void executeJob(struct Job job){
 }
 
 void pushJob(struct Job job){
+    pthread_mutex_lock(&mutexQueue);
     
     if(countQueue == 100){
         printf("Internal Server Error\n");
